@@ -3,8 +3,10 @@ import axios from 'axios'
 export const TOKEN_KEY = 'bizmanager_token'
 export const USER_KEY = 'bizmanager_user'
 
+const runtimeApiBaseUrl = window.__BIZMANAGER_CONFIG__?.apiBaseUrl
+
 const client = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
+  baseURL: runtimeApiBaseUrl || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
 })
 
 client.interceptors.request.use((config) => {

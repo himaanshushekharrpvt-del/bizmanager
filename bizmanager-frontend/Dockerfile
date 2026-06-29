@@ -13,3 +13,4 @@ COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
 
 EXPOSE 8080
+CMD ["sh", "-c", "printf 'window.__BIZMANAGER_CONFIG__ = { apiBaseUrl: \"%s\" };\\n' \"${VITE_API_BASE_URL}\" > /usr/share/nginx/html/env-config.js && nginx -g 'daemon off;'"]
