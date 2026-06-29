@@ -1,0 +1,128 @@
+@import "tailwindcss";
+
+/*
+  Design direction: "after-hours ledger" - this app's whole job is closing out
+  a day (tickets, ribbons, expenses, attendance, stock) and tallying it up.
+  Warm paper-toned text on an ink-slate ground, like a ledger book open under
+  a desk lamp after closing. Two accents (amber for money/tickets, teal for
+  "good"/present/in-stock) instead of one single bright accent, plus rust for
+  alerts. Display face (Fraunces) used sparingly for big numbers and page
+  titles; Inter for everything functional; JetBrains Mono for anything that's
+  literally a number or a code (prices, dates, IDs) - ledger-column precision.
+*/
+@theme {
+  --color-ink: #161a20;
+  --color-ink-2: #1e232b;
+  --color-ink-3: #262c36;
+  --color-line: #333b47;
+  --color-paper: #edeae2;
+  --color-muted: #8b92a0;
+  --color-amber: #e8a33d;
+  --color-amber-dim: #4a3a20;
+  --color-teal: #4fb89f;
+  --color-teal-dim: #1f3d36;
+  --color-rust: #e2614f;
+  --color-rust-dim: #432823;
+  --color-indigo: #6e7ce8;
+  --color-indigo-dim: #2a2d4d;
+
+  --font-display: "Fraunces", ui-serif, serif;
+  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+::selection {
+  background: var(--color-amber);
+  color: var(--color-ink);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-ink);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-ink-3);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-line);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-amber);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-in {
+  animation: toast-in 0.18s ease-out;
+}
+
+/* ---------------------------------------------------------------------
+   Signature element: ticket-stub stat cards (Dashboard only).
+   A dashed tear line with punched notches, like a torn ticket stub -
+   the one deliberate visual flourish in the app, used nowhere else.
+--------------------------------------------------------------------- */
+.ticket-stub {
+  position: relative;
+}
+.ticket-stub .stub-tear {
+  position: relative;
+  border-top: 1px dashed var(--color-line);
+}
+.stub-notch {
+  position: absolute;
+  top: -8px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-ink-2);
+  border: 1px solid var(--color-line);
+}
+.stub-notch.left {
+  left: -9px;
+}
+.stub-notch.right {
+  right: -9px;
+}
