@@ -41,15 +41,19 @@ public class AnalyticsService {
 
         BigDecimal stockRevenue = stockService.totalRevenueInRange(businessId, from, to);
         BigDecimal stockProfit = stockService.totalProfitInRange(businessId, from, to);
+        BigDecimal stockCost = stockRevenue.subtract(stockProfit).max(BigDecimal.ZERO);
 
         BigDecimal totalExpenses = expenseService.totalInRange(businessId, from, to);
         BigDecimal staffCost = attendanceRepository.sumStaffCostInRange(businessId, from, to);
 
-        BigDecimal revenueAfterExpenses = ticketRevenue.add(stockRevenue).subtract(totalExpenses);
-        BigDecimal netProfit = revenueAfterExpenses.subtract(staffCost);
+        BigDecimal grossRevenue = ticketRevenue.add(stockRevenue);
+        BigDecimal grossProfitBeforeOperatingCosts = ticketRevenue.add(stockProfit);
+        BigDecimal revenueAfterExpenses = grossRevenue.subtract(totalExpenses);
+        BigDecimal netProfit = grossProfitBeforeOperatingCosts.subtract(totalExpenses).subtract(staffCost);
 
         return new RevenueSummaryResponse(from, to, ticketRevenue, adultSold, childSold,
-                stockRevenue, stockProfit, totalExpenses, staffCost, revenueAfterExpenses, netProfit);
+                stockRevenue, stockProfit, stockCost, grossRevenue, grossProfitBeforeOperatingCosts,
+                totalExpenses, staffCost, revenueAfterExpenses, netProfit);
     }
 
     public DashboardResponse todayDashboard(Long businessId) {

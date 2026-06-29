@@ -39,9 +39,12 @@ export default function AnalyticsPage() {
 function RevenueTab({ range }) {
   const [summary, setSummary] = useState(null)
   const [trend, setTrend] = useState(null)
-  const [included, setIncluded] = useState({
+  const [revenueSources, setRevenueSources] = useState({
     ticketRevenue: true,
-    stockProfit: true,
+    stockRevenue: true,
+  })
+  const [deductions, setDeductions] = useState({
+    stockCost: true,
     expenses: true,
     staffCost: true,
   })
@@ -61,66 +64,178 @@ function RevenueTab({ range }) {
 
   if (!summary) return <Spinner />
 
-  const calculationParts = [
-    { key: 'ticketRevenue', amount: Number(summary.ticketRevenue) },
-    { key: 'stockProfit', amount: Number(summary.stockProfit) },
-    { key: 'expenses', amount: -Number(summary.totalExpenses) },
-    { key: 'staffCost', amount: -Number(summary.staffCost) },
-  ]
-  const calculatedNetProfit = calculationParts.reduce(
-    (total, part) => total + (included[part.key] ? part.amount : 0),
-    0,
+  const ticketRevenue = Number(summary.ticketRevenue)
+  const stockRevenue = Number(summary.stockRevenue)
+  const stockProfit = Number(summary.stockProfit)
+  const stockCost = Number(summary.stockCost ?? Math.max(stockRevenue - stockProfit, 0))
+  const expenses = Number(summary.totalExpenses)
+  const staffCost = Number(summary.staffCost)
+  const grossRevenue = Number(summary.grossRevenue ?? ticketRevenue + stockRevenue)
+  const grossProfitBeforeOperatingCosts = Number(
+    summary.grossProfitBeforeOperatingCosts ?? ticketRevenue + stockProfit,
   )
-  const netPositive = calculatedNetProfit >= 0
-  const toggleIncluded = (key) => setIncluded((current) => ({ ...current, [key]: !current[key] }))
+  const selectedRevenue =
+    (revenueSources.ticketRevenue ? ticketRevenue : 0) +
+    (revenueSources.stockRevenue ? stockRevenue : 0)
+  const selectedDeductions =
+    (deductions.stockCost && revenueSources.stockRevenue ? stockCost : 0) +
+    (deductions.expenses ? expenses : 0) +
+    (deductions.staffCost ? staffCost : 0)
+  const netResult = selectedRevenue - selectedDeductions
+  const netPositive = netResult >= 0
+  const stockMargin = stockRevenue > 0 ? Math.round((stockProfit * 10000) / stockRevenue) / 100 : 0
+  const toggleRevenueSource = (key) => setRevenueSources((current) => ({ ...current, [key]: !current[key] }))
+  const toggleDeduction = (key) => setDeductions((current) => ({ ...current, [key]: !current[key] }))
 
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Metric
+        <SummaryMetric
           label="Ticket revenue"
           value={formatMoney(summary.ticketRevenue)}
           sub={`${summary.adultTicketsSold} adult · ${summary.childTicketsSold} child`}
-          included={included.ticketRevenue}
-          onToggle={() => toggleIncluded('ticketRevenue')}
         />
-        <Metric
-          label="Stock sales"
+        <SummaryMetric
+          label="Stock sales revenue"
           value={formatMoney(summary.stockRevenue)}
-          sub={`profit ${formatMoney(summary.stockProfit)}`}
-          included={included.stockProfit}
-          onToggle={() => toggleIncluded('stockProfit')}
+          sub={`gross sales from stock`}
         />
-        <Metric
-          label="Expenses"
-          value={formatMoney(summary.totalExpenses)}
-          included={included.expenses}
-          onToggle={() => toggleIncluded('expenses')}
+        <SummaryMetric
+          label="Stock gross profit"
+          value={formatMoney(summary.stockProfit)}
+          sub={`after ${formatMoney(stockCost)} item cost · ${stockMargin}% margin`}
         />
-        <Metric
-          label="Staff cost"
-          value={formatMoney(summary.staffCost)}
-          sub="present-day pay"
-          included={included.staffCost}
-          onToggle={() => toggleIncluded('staffCost')}
+        <SummaryMetric
+          label="Gross revenue"
+          value={formatMoney(grossRevenue)}
+          sub="tickets + stock sales"
         />
       </div>
 
       <Card className="border-amber/30">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <p className="text-sm text-muted">Ticket revenue + stock profit</p>
-          <p className="font-mono text-xl text-paper">
-            {formatMoney((included.ticketRevenue ? Number(summary.ticketRevenue) : 0) + (included.stockProfit ? Number(summary.stockProfit) : 0))}
-          </p>
-        </div>
-        <div className="my-2 border-t border-line" />
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <p className="text-sm text-muted">Net profit</p>
-          <p className={`font-mono text-2xl ${netPositive ? 'text-teal' : 'text-rust'}`}>
-            {formatMoney(calculatedNetProfit)}
-          </p>
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="font-mono text-[11px] uppercase tracking-wide text-muted">Profit / loss calculator</p>
+              <p className="mt-1 text-sm text-muted">Choose revenue sources, then choose which costs to subtract.</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-muted">Selected revenue</p>
+              <p className="font-mono text-xl text-paper">{formatMoney(selectedRevenue)}</p>
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs uppercase tracking-wide text-muted">Revenue included</p>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <ChoiceToggle
+                label="Ticket revenue"
+                value={formatMoney(summary.ticketRevenue)}
+                description={`${summary.adultTicketsSold} adult tickets · ${summary.childTicketsSold} child tickets`}
+                active={revenueSources.ticketRevenue}
+                activeLabel="Included"
+                inactiveLabel="Ignored"
+                onClick={() => toggleRevenueSource('ticketRevenue')}
+              />
+              <ChoiceToggle
+                label="Stock sales revenue"
+                value={formatMoney(summary.stockRevenue)}
+                description={`Gross stock sales. Profit before other costs is ${formatMoney(summary.stockProfit)}.`}
+                active={revenueSources.stockRevenue}
+                activeLabel="Included"
+                inactiveLabel="Ignored"
+                onClick={() => toggleRevenueSource('stockRevenue')}
+              />
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs uppercase tracking-wide text-muted">Costs subtracted</p>
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+              <ChoiceToggle
+                label="Stock item cost"
+                value={formatMoney(stockCost)}
+                description="Subtract purchase cost so stock sales become stock profit."
+                active={deductions.stockCost && revenueSources.stockRevenue}
+                activeLabel="Subtract"
+                inactiveLabel={revenueSources.stockRevenue ? 'Ignore' : 'Stock off'}
+                disabled={!revenueSources.stockRevenue}
+                tone="cost"
+                onClick={() => toggleDeduction('stockCost')}
+              />
+              <ChoiceToggle
+                label="Expenses"
+                value={formatMoney(summary.totalExpenses)}
+                description="Daily expense entries in this range."
+                active={deductions.expenses}
+                activeLabel="Subtract"
+                inactiveLabel="Ignore"
+                tone="cost"
+                onClick={() => toggleDeduction('expenses')}
+              />
+              <ChoiceToggle
+                label="Staff cost"
+                value={formatMoney(summary.staffCost)}
+                description="Present-day salary cost in this range."
+                active={deductions.staffCost}
+                activeLabel="Subtract"
+                inactiveLabel="Ignore"
+                tone="cost"
+                onClick={() => toggleDeduction('staffCost')}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-line bg-ink/40 p-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <p className="text-sm text-muted">Selected revenue</p>
+              <p className="font-mono text-lg text-paper">{formatMoney(selectedRevenue)}</p>
+            </div>
+            <div className="mt-2 flex flex-wrap items-baseline justify-between gap-2">
+              <p className="text-sm text-muted">Selected deductions</p>
+              <p className="font-mono text-lg text-paper">-{formatMoney(selectedDeductions)}</p>
+            </div>
+            <div className="my-3 border-t border-line" />
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <p className="text-sm text-muted">Formula</p>
+              <p className="text-right text-xs text-muted">selected revenue - selected costs</p>
+            </div>
+            <div className="my-3 border-t border-line" />
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <p className="text-sm text-muted">Net profit / loss</p>
+              <p className={`font-mono text-2xl ${netPositive ? 'text-teal' : 'text-rust'}`}>
+                {formatMoney(netResult)}
+              </p>
+            </div>
+          </div>
         </div>
       </Card>
+
+      <Card>
+        <p className="mb-3 font-mono text-[11px] uppercase tracking-wide text-muted">Quick breakdown</p>
+        <dl className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
+          <BreakdownRow label="Ticket revenue" value={formatMoney(summary.ticketRevenue)} />
+          <BreakdownRow label="Stock revenue" value={formatMoney(summary.stockRevenue)} />
+          <BreakdownRow label="Stock item cost" value={`-${formatMoney(stockCost)}`} />
+          <BreakdownRow label="Stock gross profit" value={formatMoney(summary.stockProfit)} positive />
+          <BreakdownRow label="Profit before expenses" value={formatMoney(grossProfitBeforeOperatingCosts)} positive />
+          <BreakdownRow label="Expenses" value={`-${formatMoney(summary.totalExpenses)}`} />
+          <BreakdownRow label="Staff cost" value={`-${formatMoney(summary.staffCost)}`} />
+        </dl>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <SummaryMetric
+          label="Expenses"
+          value={formatMoney(summary.totalExpenses)}
+          sub="business expenses"
+        />
+        <SummaryMetric
+          label="Staff cost"
+          value={formatMoney(summary.staffCost)}
+          sub="present-day pay"
+        />
+      </div>
 
       {trend && trend.length > 1 && (
         <Card>
@@ -146,35 +261,60 @@ function RevenueTab({ range }) {
   )
 }
 
-function Metric({ label, value, sub, included = true, onToggle }) {
-  if (onToggle) {
-    return (
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-pressed={included}
-        className={`rounded-2xl border bg-ink-2 p-4 text-left transition-colors sm:p-5 ${
-          included ? 'border-amber/50 ring-1 ring-amber/20' : 'border-line opacity-70 hover:opacity-100'
-        }`}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <p className="text-xs uppercase tracking-wide text-muted">{label}</p>
-          <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${included ? 'border-amber/30 bg-amber-dim text-amber' : 'border-line bg-ink-3 text-muted'}`}>
-            {included ? 'Included' : 'Excluded'}
-          </span>
-        </div>
-        <p className="mt-1 font-mono text-xl text-paper">{value}</p>
-        {sub && <p className="mt-1 text-xs text-muted">{sub}</p>}
-      </button>
-    )
-  }
-
+function SummaryMetric({ label, value, sub }) {
   return (
     <Card>
       <p className="text-xs uppercase tracking-wide text-muted">{label}</p>
       <p className="mt-1 font-mono text-xl text-paper">{value}</p>
       {sub && <p className="mt-1 text-xs text-muted">{sub}</p>}
     </Card>
+  )
+}
+
+function ChoiceToggle({
+  label,
+  value,
+  description,
+  active,
+  activeLabel,
+  inactiveLabel,
+  tone = 'revenue',
+  disabled = false,
+  onClick,
+}) {
+  const activeStyles = tone === 'cost' ? 'border-rust/40 bg-rust-dim/50' : 'border-amber/50 bg-amber-dim/40'
+  const badgeStyles = tone === 'cost' ? 'border-rust/30 text-rust' : 'border-amber/30 text-amber'
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      aria-pressed={active}
+      className={`rounded-xl border p-4 text-left transition-colors ${
+        active ? activeStyles : 'border-line bg-ink-3/50 opacity-75 hover:opacity-100'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-paper">{label}</p>
+          <p className="mt-1 text-xs text-muted">{description}</p>
+        </div>
+        <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${active ? badgeStyles : 'border-line text-muted'}`}>
+          {active ? activeLabel : inactiveLabel}
+        </span>
+      </div>
+      <p className="mt-3 font-mono text-lg text-paper">{value}</p>
+    </button>
+  )
+}
+
+function BreakdownRow({ label, value, positive }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-lg bg-ink-3/50 px-3 py-2">
+      <dt className="text-muted">{label}</dt>
+      <dd className={`font-mono ${positive ? 'text-teal' : 'text-paper'}`}>{value}</dd>
+    </div>
   )
 }
 

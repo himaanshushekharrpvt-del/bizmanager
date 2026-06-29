@@ -12,6 +12,7 @@ public class AnalyticsDtos {
             LocalDate from, LocalDate to,
             BigDecimal ticketRevenue, long adultTicketsSold, long childTicketsSold,
             BigDecimal stockRevenue, BigDecimal stockProfit,
+            BigDecimal stockCost, BigDecimal grossRevenue, BigDecimal grossProfitBeforeOperatingCosts,
             BigDecimal totalExpenses, BigDecimal staffCost,
             BigDecimal revenueAfterExpenses,
             BigDecimal netProfitAfterStaffCost
