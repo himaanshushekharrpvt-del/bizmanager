@@ -100,9 +100,13 @@ public class StockService {
     public StockSaleEntry logSale(LogStockSaleRequest req) {
         authContext.require(Permission.ENTER_STOCK_SALE);
         Long businessId = authContext.businessId();
+        LocalDate today = LocalDate.now();
+        if (!today.equals(req.saleDate())) {
+            throw new BadRequestException("Stock sales can only be logged for today");
+        }
         StockItem item = getOwned(req.stockItemId(), businessId);
 
-        var existing = saleEntryRepository.findByBusinessIdAndStockItemIdAndSaleDate(businessId, item.getId(), req.saleDate());
+        var existing = saleEntryRepository.findByBusinessIdAndStockItemIdAndSaleDate(businessId, item.getId(), today);
         int previousQtySold = existing.map(StockSaleEntry::getQuantitySold).orElse(0);
         int delta = req.quantitySold() - previousQtySold;
 
@@ -128,7 +132,7 @@ public class StockService {
             saved = saleEntryRepository.save(StockSaleEntry.builder()
                     .businessId(businessId)
                     .stockItem(item)
-                    .saleDate(req.saleDate())
+                    .saleDate(today)
                     .quantitySold(req.quantitySold())
                     .revenueGenerated(revenue)
                     .profitGenerated(profit)
@@ -140,7 +144,7 @@ public class StockService {
 
         auditService.record(businessId, authContext.userId(), authContext.currentUser().getName(),
                 action, "StockSaleEntry", saved.getId(), previousQtySold, req.quantitySold(),
-                item.getName() + " / " + req.saleDate());
+                item.getName() + " / " + today);
         checkLowStock(item);
         return saved;
     }

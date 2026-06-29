@@ -25,5 +25,7 @@ export function formatDateTime(isoOrDate) {
 
 export function todayIso() {
   const d = new Date()
-  return d.toISOString().slice(0, 10)
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${month}-${day}`
 }
