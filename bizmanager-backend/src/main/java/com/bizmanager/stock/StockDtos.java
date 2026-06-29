@@ -20,6 +20,7 @@ public class StockDtos {
     public record UpdateStockItemRequest(
             String name,
             Integer quantity,
+            Integer restockQuantity,
             BigDecimal costPrice,
             BigDecimal sellingPrice,
             Integer lowStockThreshold

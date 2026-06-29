@@ -61,6 +61,12 @@ public class StockService {
         String oldSnapshot = item.getQuantity() + " @ cost " + item.getCostPrice() + " / sell " + item.getSellingPrice();
         if (req.name() != null) item.setName(req.name());
         if (req.quantity() != null) item.setQuantity(req.quantity());
+        if (req.restockQuantity() != null) {
+            if (req.restockQuantity() < 0) {
+                throw new BadRequestException("Restock quantity cannot be negative");
+            }
+            item.setQuantity(item.getQuantity() + req.restockQuantity());
+        }
         if (req.costPrice() != null) item.setCostPrice(req.costPrice());
         if (req.sellingPrice() != null) item.setSellingPrice(req.sellingPrice());
         if (req.lowStockThreshold() != null) item.setLowStockThreshold(req.lowStockThreshold());

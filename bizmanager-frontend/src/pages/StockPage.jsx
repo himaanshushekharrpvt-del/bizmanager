@@ -137,6 +137,7 @@ function ItemForm({ item, onDone }) {
   const [form, setForm] = useState({
     name: item.name || '',
     quantity: item.quantity ?? '',
+    restockQuantity: '',
     costPrice: item.costPrice ?? '',
     sellingPrice: item.sellingPrice ?? '',
     lowStockThreshold: item.lowStockThreshold ?? 10,
@@ -153,15 +154,20 @@ function ItemForm({ item, onDone }) {
     setError(null)
     const payload = {
       name: form.name,
-      quantity: Number(form.quantity),
       costPrice: Number(form.costPrice),
       sellingPrice: Number(form.sellingPrice),
       lowStockThreshold: Number(form.lowStockThreshold),
     }
+    if (isEdit) {
+      payload.restockQuantity = Number(form.restockQuantity || 0)
+    } else {
+      payload.quantity = Number(form.quantity)
+    }
     try {
       if (isEdit) {
         await stockApi.updateItem(item.id, payload)
-        toast.success('Item updated')
+        const added = Number(form.restockQuantity || 0)
+        toast.success(added > 0 ? `Item updated · added ${added} to stock` : 'Item updated')
       } else {
         await stockApi.createItem(payload)
         toast.success(`"${form.name}" added`)
@@ -177,7 +183,21 @@ function ItemForm({ item, onDone }) {
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
       <Input label="Name" value={form.name} onChange={update('name')} required />
-      <Input label="Quantity" type="number" min="0" value={form.quantity} onChange={update('quantity')} required />
+      {isEdit ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input label="Current stock" type="number" value={item.quantity ?? 0} readOnly hint="Current quantity available now." />
+          <Input
+            label="Restock quantity"
+            type="number"
+            min="0"
+            value={form.restockQuantity}
+            onChange={update('restockQuantity')}
+            hint={`New stock after saving: ${(Number(item.quantity) || 0) + (Number(form.restockQuantity) || 0)}`}
+          />
+        </div>
+      ) : (
+        <Input label="Opening stock" type="number" min="0" value={form.quantity} onChange={update('quantity')} required />
+      )}
       <Input label="Cost price" type="number" min="0" step="0.01" value={form.costPrice} onChange={update('costPrice')} required />
       <Input
         label="Selling price"
